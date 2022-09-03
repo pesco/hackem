@@ -229,7 +229,8 @@ main(int argc, char *argv[])
 				A = result;
 
 			/* terminate on idiomatic infinite loops */
-			if (ddd == 0 && jjj == 7 && A == PC)
+			if (ddd == 0 && jjj == 7 && 
+			    (A == PC || A == PC - 1 && rom[A] == A))
 				break;
 
 			/* perform jump if required */
