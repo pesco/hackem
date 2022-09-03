@@ -218,7 +218,7 @@ main(int argc, char *argv[])
 				y = A;
 
 			/* perform computation */
-			result	= alu(D, y, comp);
+			result = alu(D, y, comp);
 
 			/* distribute result to destinations */
 			if (bit(ddd, 0))	/* M */
