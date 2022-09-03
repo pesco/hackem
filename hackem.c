@@ -228,7 +228,16 @@ main(int argc, char *argv[])
 			if (bit(ddd, 2))	/* A */
 				A = result;
 
-			/* terminate on idiomatic infinite loops */
+			/*
+			 * Terminate on idiomatic infinite loops. I.e. an
+			 * unconditional jump without any assignment that leads
+			 * (a) directly to itself or (b) to an immediately
+			 * preceeding instruction that loads its own address.
+			 *
+			 * 	(a)  @END	(b)  (END)
+			 *	     (END)	     @END
+			 *	     0;JMP	     0;JMP
+			 */
 			if (ddd == 0 && jjj == 7 && 
 			    (A == PC || A == PC - 1 && rom[A] == A))
 				break;
