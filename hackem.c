@@ -232,7 +232,7 @@ main(int argc, char *argv[])
 			 * Terminate on idiomatic infinite loops. I.e. an
 			 * unconditional jump without any assignment that leads
 			 * (a) directly to itself or (b) to an immediately
-			 * preceeding instruction that loads its own address.
+			 * preceding instruction that loads its own address.
 			 *
 			 * 	(a)  @END	(b)  (END)
 			 *	     (END)	     @END
