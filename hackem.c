@@ -181,6 +181,31 @@ long T;			/* global clock tick counter */
 FILE *tfile;
 
 void
+tracehdr(void)
+{
+	if (tfile == NULL)
+		return;
+
+	fprintf(tfile, "T\tPC\tinstr.\tA\tD\t"
+	    "R0/SP\tR1/LCL\tR2/ARG\tR3/THIS\tR4/THAT\n");
+}
+
+void
+trace(uint16_t PC, uint16_t instr, uint16_t A, uint16_t D)
+{
+	int i;
+
+	if (tfile == NULL)
+		return;
+
+	fprintf(tfile, "%ld\t%" PRIu16 "\t%.6" PRIo16 "\t%d\t%d", T, PC, instr,
+	    sint(A), sint(D));
+	for (i = 0; i < 5; i++)
+		fprintf(tfile, "\t%d", ram[i]);
+	putc('\n', tfile);
+}
+
+void
 usage(void)
 {
 	extern char *__progname;
@@ -224,8 +249,7 @@ main(int argc, char *argv[])
 	// XXX time keeping
 
 	/* print header line to trace file, if applicable */
-	if (tfile)
-		fprintf(tfile, "T\tPC\tinstr.\tA\tD\n");
+	tracehdr();
 
 	/* the main loop */
 	A = D = 0;
@@ -233,9 +257,7 @@ main(int argc, char *argv[])
 		instr = rom[PC];
 
 		/* print CPU state to trace file, if applicable */
-		if (tfile != NULL)
-			fprintf(tfile, "%ld\t%" PRIu16 "\t%.6" PRIo16
-			    "\t%d\t%d\n", T, PC, instr, sint(A), sint(D));
+		trace(PC, instr, A, D);
 
 		if (bit(instr, 15)) {		/* C-instruction */
 			/* decode instruction */
