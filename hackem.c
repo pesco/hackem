@@ -127,8 +127,8 @@ writemem(uint16_t address, uint16_t value)
  */
 
 /* helpers to extract one or more bits from a word */
-#define bit(x, p)	((x >> p) & 1)
-#define bits(x, p, n)	((x >> p) & ~(~0 << n))
+#define bit(x, p)	(((x) >> (p)) & 1)
+#define bits(x, p, n)	(((x) >> (p)) & ~(~0 << (n)))
 
 /* comp = zx nx zy ny f no */
 uint16_t
