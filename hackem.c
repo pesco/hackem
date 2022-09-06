@@ -130,6 +130,10 @@ writemem(uint16_t address, uint16_t value)
 #define bit(x, p)	(((x) >> (p)) & 1)
 #define bits(x, p, n)	(((x) >> (p)) & ~(~0 << (n)))
 
+/* derived helpers */
+#define positive(x)	(bit(x, 15) == 0 && (x) != 0)
+#define negative(x)	(bit(x, 15) == 1)
+
 /* comp = zx nx zy ny f no */
 uint16_t
 alu(uint16_t x, uint16_t y, uint16_t comp)
@@ -269,9 +273,9 @@ main(int argc, char *argv[])
 				break;
 
 			/* perform jump if required */
-			if ((bit(jjj, 0) && result > 0)  ||
+			if ((bit(jjj, 0) && positive(result)) ||
 			    (bit(jjj, 1) && result == 0) ||
-			    (bit(jjj, 2) && result < 0))
+			    (bit(jjj, 2) && negative(result)))
 				PC = A - 1;
 		} else				/* A-instruction */
 			A = instr;
