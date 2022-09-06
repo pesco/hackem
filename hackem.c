@@ -265,13 +265,13 @@ main(int argc, char *argv[])
 			 *	     0;JMP	     0;JMP
 			 */
 			if (ddd == 0 && jjj == 7 && 
-			    (A == PC || A == PC - 1 && rom[A] == A))
+			    (A == PC || (A == PC - 1 && rom[A] == A)))
 				break;
 
 			/* perform jump if required */
-			if (bit(jjj, 0) && result > 0  ||
-			    bit(jjj, 1) && result == 0 ||
-			    bit(jjj, 2) && result < 0)
+			if ((bit(jjj, 0) && result > 0)  ||
+			    (bit(jjj, 1) && result == 0) ||
+			    (bit(jjj, 2) && result < 0))
 				PC = A - 1;
 		} else				/* A-instruction */
 			A = instr;
