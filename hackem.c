@@ -134,6 +134,9 @@ writemem(uint16_t address, uint16_t value)
 #define positive(x)	(bit(x, 15) == 0 && (x) != 0)
 #define negative(x)	(bit(x, 15) == 1)
 
+/* conversion to signed integer */
+#define sint(x)		(negative(x) ? (x) - (1 << 16) : (x))
+
 /* comp = zx nx zy ny f no */
 uint16_t
 alu(uint16_t x, uint16_t y, uint16_t comp)
@@ -231,8 +234,8 @@ main(int argc, char *argv[])
 
 		/* print CPU state to trace file, if applicable */
 		if (tfile != NULL)
-			fprintf(tfile, "%ld\t%" PRIu16 "\t%.6" PRIo16 "\t%"
-			    PRId16 "\t%" PRId16 "\n", T, PC, instr, A, D);
+			fprintf(tfile, "%ld\t%" PRIu16 "\t%.6" PRIo16
+			    "\t%d\t%d\n", T, PC, instr, sint(A), sint(D));
 
 		if (bit(instr, 15)) {		/* C-instruction */
 			/* decode instruction */
