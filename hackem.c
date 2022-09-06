@@ -4,7 +4,8 @@
  * Cf. Nisan and Schocken, The Elements of Computing Systems, MIT Press.
  */
 
-#include <stdio.h>
+#include <stdio.h>	/* FILE */
+#include <stdint.h>	/* uint16_t */
 
 
 /*
@@ -160,20 +161,24 @@ alu(uint16_t x, uint16_t y, uint16_t comp)
  * Main program.
  */
 
+#include <inttypes.h>	/* PRI... */
 #include <fcntl.h>	/* open */
-#include <unistd.h>	/* close */
+#include <unistd.h>	/* close, getopt */
 #include <sys/mman.h>	/* mmap */
 #include <stdlib.h>	/* exit */
 #include <err.h>
 
-long t;			/* global time counter: ms since program start */
+long T;			/* global clock tick counter */
+
+/* command line options */
+FILE *tfile;
 
 void
 usage(void)
 {
 	extern char *__progname;
 
-	fprintf(stderr, "usage: %s prog.rom\n", __progname);
+	fprintf(stderr, "usage: %s [-t file] prog.rom\n", __progname);
 	exit(100);
 }
 
@@ -183,15 +188,26 @@ main(int argc, char *argv[])
 	uint16_t A, D, PC;			/* registers */
 	uint16_t a, comp, ddd, jjj;		/* instruction parts */
 	uint16_t result, instr, y;
-	int fd;
+	int fd, c;
 
-	// XXX command line
-	argc--;
+	/* process command line flags */
+	while ((c = getopt(argc, argv, "t:")) != -1) {
+		switch (c) {
+		case 't':
+			if ((tfile = fopen(optarg, "w")) == NULL)
+				err(100, "%s", optarg);
+			break;
+		default:
+			usage();
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
 	/* map rom file into memory */
 	if (argc < 1)
 		usage();
-	if ((fd = open(argv[1], O_RDONLY)) == -1)
+	if ((fd = open(argv[0], O_RDONLY)) == -1)
 		err(100, "open");
 	rom = mmap(NULL, 0x8000, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (rom == MAP_FAILED)
@@ -200,9 +216,19 @@ main(int argc, char *argv[])
 
 	// XXX time keeping
 
+	/* print header line to trace file, if applicable */
+	if (tfile != NULL)
+		fprintf(tfile, "T\tPC\tinstr.\tA\tD\n");
+
+	/* the main loop */
 	A = D = 0;
-	for (PC = 0; ; PC++) {
+	for (PC = 0; ; T++, PC++) {
 		instr = rom[PC];
+
+		/* print CPU state to trace file, if applicable */
+		if (tfile != NULL)
+			fprintf(tfile, "%ld\t%" PRIu16 "\t%.6" PRIo16 "\t%"
+			    PRId16 "\t%" PRId16 "\n", T, PC, instr, A, D);
 
 		if (bit(instr, 15)) {		/* C-instruction */
 			/* decode instruction */
