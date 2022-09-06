@@ -217,7 +217,7 @@ main(int argc, char *argv[])
 	// XXX time keeping
 
 	/* print header line to trace file, if applicable */
-	if (tfile != NULL)
+	if (tfile)
 		fprintf(tfile, "T\tPC\tinstr.\tA\tD\n");
 
 	/* the main loop */
@@ -280,6 +280,10 @@ main(int argc, char *argv[])
 
 		// XXX tick delay
 	}
+
+	/* return success in trace mode */
+	if (tfile)
+		return 0;
 
 	return D;
 }
