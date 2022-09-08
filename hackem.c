@@ -56,7 +56,7 @@ struct mem {
 	{0x4000, MASK(12)},			/* screen */
 	{0x6000, MASK(0),	DEV(dummy)},	/* keyboard */
 	{0x7000, MASK(1),	DEV(itape)},	/* tape reader */
-	{0x7002, MASK(1),	DEV(otape)},	/* tape writer */
+	{0x7002, MASK(1),	DEV(otape)},	/* tape punch */
 	{0x7004, MASK(1),	DEV(printer)},	/* printer */
 };
 #define MAPSIZE (sizeof memmap / sizeof(struct mem))
@@ -386,7 +386,7 @@ w_itape(struct device *dev, uint16_t *mem, uint16_t offset)
  * The result of reading from offset 0 is undefined.
  *
  * Reading from offset 1 yields a status word. A negative value (bit 15 set)
- * indicates that the tape is at an appropriate position. This is invalid,
+ * indicates that the tape is in position for new output. This is invalid,
  * however, if 14 is also set. Bit 14 indicates the end of the tape (or that no
  * tape is present). All other bits are undefined.
  * The result of writing to offset 1 is undefined.
@@ -401,8 +401,9 @@ void
 r_otape(struct device *dev, uint16_t *mem, uint16_t offset)
 {
 	if (offset & 1) {			/* offset 1 */
-		/* bit 15: track hole */
+		/* bit 15: tape position */
 		/* bit 14: tape presence */
+		mem[offset] = 0x8000;
 	} else {				/* offset 0 */
 		/* bit 15: tape presence */
 	}
