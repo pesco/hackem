@@ -54,6 +54,7 @@ main(int argc, char **argv)
 	while ((c = getchar()) != EOF) {
 		if (c == '#') {			/* comment */
 			while ((c = getchar()) != EOF && c != '\n')
+				;
 			if (c == EOF)
 				break;
 		}
