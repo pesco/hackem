@@ -61,14 +61,12 @@ main(int argc, char **argv)
 
 		/* detect and handle the end of the line */
 		if (c == '\n') {
-			if (n == 0)		/* empty line */
-				continue;
-
-			if (n != 16)		/* wrong number of digits */
+			if (n != 16 && n != 0)	/* wrong number of digits */
 				break;
 
-			if (fwrite(&x, sizeof x, 1, fout) == 0)
-				err(1, "%s: write error", argv[1]);
+			if (n != 0)		/* ignore empty lines */
+				if (fwrite(&x, sizeof x, 1, fout) == 0)
+					err(1, "%s: write error", argv[1]);
 
 			line++;			/* process next line... */
 			n = 0;
