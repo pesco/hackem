@@ -1,8 +1,14 @@
 CFLAGS += -Wall
 
-.PHONY: all roms
-all: hackem rom roms
-roms: add.rom max.rom term0.rom term1.rom term2.rom
+PROGS = hackem rom
+ROMS = add.rom max.rom term0.rom term1.rom term2.rom
+
+.PHONY: all test clean
+all: ${PROGS} ${ROMS}
+clean:
+	rm -f ${PROGS} ${ROMS}
+test: all
+	sh test.sh ${ROMS}
 
 .SUFFIXES: .hack .rom .tsv
 .hack.rom:
