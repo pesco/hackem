@@ -1,3 +1,6 @@
+# adapted from nand2tetris/projects/05/Add.hack
+# distributed under Creative Commons BY-NC-SA 3.0
+
 			# compute D=2+3, store result in R0
 0 000000000000010	# 0: @2
 1 11 0 110000 010 000	# 1: D=A; (~0 & A)

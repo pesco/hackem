@@ -1,3 +1,6 @@
+# adapted from nand2tetris/projects/05/Max.hack
+# distributed under Creative Commons BY-NC-SA 3.0
+
 			# store 13 and 17 to R0 and R1, respectively
 0 000000000001101	#  0: @13	<- arg 1
 1 11 0 110000 010 000	#  1: D=A;
