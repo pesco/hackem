@@ -201,7 +201,7 @@ trace(uint16_t PC, uint16_t instr, uint16_t A, uint16_t D)
 	fprintf(tfile, "%ld\t%" PRIu16 "\t%.6" PRIo16 "\t%d\t%d", T, PC, instr,
 	    sint(A), sint(D));
 	for (i = 0; i < 5; i++)
-		fprintf(tfile, "\t%d", ram[i]);
+		fprintf(tfile, "\t%d", sint(ram[i]));
 	putc('\n', tfile);
 }
 
