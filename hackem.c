@@ -330,9 +330,7 @@ main(int argc, char *argv[])
 	close(fd);
 
 	/* print header line to trace file, if applicable */
-	if (tfile)
-		fprintf(tfile, "T\tPC\tinstr.\tA\tD\t"
-		    "R0/SP\tR1/LCL\tR2/ARG\tR3/THIS\tR4/THAT\n");
+	tracehdr();
 
 	/* compute the desired duration of one clock tick */
 	dur.tv_nsec = 1000000000L * modf(sfactor / cpufreq, &d);
