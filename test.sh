@@ -3,17 +3,24 @@
 result=0
 
 t=$(mktemp)
+o=$(mktemp)
 for rom in "$@"
 do
-	if ! hackem -t $t $rom
+	base=$(basename $rom .rom)
+
+	if ! hackem -t $t $rom >$o
 	then
-		echo ERROR: $rom
-		result=$((result | 2))
+		echo "ERROR: $rom (exit $?)" >/dev/stderr
+		result=$((result | 8))
 	fi
-	if ! diff -u $(basename $rom .rom).tsv $t
+	if ! diff -u $base.tsv $t
 	then
-		echo FAIL: $rom
+		echo "FAIL: $rom (bad trace)" >/dev/stderr
 		result=$((result | 1))
+	elif [ -f $base.out ] && ! diff -u $base.out $o
+	then
+		echo "FAIL: $rom (bad output)" >/dev/stderr
+		result=$((result | 2))
 	else
 		echo ok: $rom
 	fi
