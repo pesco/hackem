@@ -8,7 +8,7 @@ all: ${PROGS} ${ROMS}
 clean:
 	rm -f ${PROGS} ${ROMS}
 test: all
-	sh test.sh ${ROMS}
+	@sh test.sh ${ROMS}
 
 .SUFFIXES: .hack .rom .tsv
 .hack.rom:
