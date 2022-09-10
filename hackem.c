@@ -26,6 +26,7 @@ struct device {
 struct tape {
 	struct device dev;
 	FILE *stream;
+	long busy;
 };
 
 /* I/O update routines */
@@ -34,12 +35,13 @@ void r_itape(struct device *, uint16_t *, uint16_t);
 void w_itape(struct device *, uint16_t *, uint16_t);
 void r_otape(struct device *, uint16_t *, uint16_t);
 void w_otape(struct device *, uint16_t *, uint16_t);
+void t_tape(struct device *, uint16_t *);
 
 /* device structures */
 struct device dev_dummy	= {NULL, w_dummy};	/* writes are no-ops */
-struct tape dev_itape	= {{r_itape, w_itape}, stdin};
-struct tape dev_otape	= {{r_otape, w_otape}, stdout};
-struct tape dev_printer	= {{r_otape, w_otape}, stderr};
+struct tape dev_itape	= {{r_itape, w_itape, t_tape}, stdin};
+struct tape dev_otape	= {{r_otape, w_otape, t_tape}, stdout};
+struct tape dev_printer	= {{r_otape, w_otape, t_tape}, stderr};
 
 /* instruction and data memories */
 uint16_t ram[32 * 1024];			/* includes I/O space */
@@ -332,6 +334,10 @@ main(int argc, char *argv[])
 	/* print header line to trace file, if applicable */
 	tracehdr();
 
+	/* disable stdout buffering unless running at max speed */
+	if (sfactor > 0.0)
+		setbuf(stdout, NULL);
+
 	/* compute the desired duration of one clock tick */
 	dur.tv_nsec = 1000000000L * modf(sfactor / cpufreq, &d);
 	dur.tv_sec = d;
@@ -423,6 +429,15 @@ w_itape(struct device *dev, uint16_t *mem, uint16_t offset)
 	// XXX input tape advance/seek
 }
 
+void
+t_tape(struct device *dev, uint16_t *mem)
+{
+	struct tape *tp = (struct tape *)dev;
+
+	if (tp->busy > 0)
+		tp->busy--;
+}
+
 
 /*
  * The tape punch provides two addresses.
@@ -447,13 +462,24 @@ w_itape(struct device *dev, uint16_t *mem, uint16_t offset)
 void
 r_otape(struct device *dev, uint16_t *mem, uint16_t offset)
 {
+	struct tape *tp = (struct tape *)dev;
+	uint16_t w = 0;
+
 	if (offset & 1) {			/* offset 1 */
 		/* bit 15: tape position */
+		if (!tp->busy)
+			w |= 0x8000u;
+
 		/* bit 14: tape presence */
-		mem[offset] = 0x8000;
+		if (feof(tp->stream))
+			w |= 0x4000u;
 	} else {				/* offset 0 */
 		/* bit 15: tape presence */
+		if (feof(tp->stream))
+			w |= 0x8000u;
 	}
+
+	mem[offset] = w;
 }
 
 void
@@ -463,9 +489,16 @@ w_otape(struct device *dev, uint16_t *mem, uint16_t offset)
 
 	if (offset & 1) {			/* offset 1 */
 		/* no effect */
-		return;
 	} else {				/* offset 0 */
-		// XXX no/ill effect if tape not ready
+		/* no effect if tape not ready */
+		if (tp->busy)
+			return;
+
+		/* NB: no effect if stream at EOF */
 		fputc((unsigned char) mem[offset], tp->stream);
+
+		/* set tape busy for 150 ms */
+		tp->busy = cpufreq * 150 / 1000;
+		assert(tp->busy >= 0);
 	}
 }
