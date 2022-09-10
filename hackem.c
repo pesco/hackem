@@ -165,6 +165,70 @@ alu(uint16_t x, uint16_t y, uint16_t comp)
 
 
 /*
+ * Central Processing Unit.
+ */
+
+uint16_t A, D, PC;			/* registers */
+
+int
+cpu(uint16_t instr)
+{
+	uint16_t a, comp, ddd, jjj;	/* instruction parts */
+	uint16_t result, y;
+
+	if (bit(instr, 15)) {		/* C-instruction */
+		/* decode instruction */
+		jjj	= bits(instr, 0, 3);
+		ddd	= bits(instr, 3, 3);
+		comp	= bits(instr, 6, 6);
+		a	= bits(instr, 12, 1);
+
+		/* switch ALU input between A and M */
+		if (a)
+			y = readmem(A);
+		else
+			y = A;
+
+		/* perform computation */
+		result = alu(D, y, comp);
+
+		/* distribute result to destinations */
+		if (bit(ddd, 0))	/* M */
+			writemem(A, result);
+		if (bit(ddd, 1))	/* D */
+			D = result;
+		if (bit(ddd, 2))	/* A */
+			A = result;
+
+		/*
+		 * Terminate on idiomatic infinite loops. I.e. an
+		 * unconditional jump without any assignment that leads
+		 * (a) directly to itself or (b) to an immediately
+		 * preceding instruction that loads its own address.
+		 *
+		 * 	(a)  @END	(b)  (END)
+		 *	     (END)	     @END
+		 *	     0;JMP	     0;JMP
+		 */
+		if (ddd == 0 && jjj == 7 && 
+		    (A == PC || (A == PC - 1 && rom[A] == A)))
+			return 0;	/* stop */
+
+		/* perform jump if required */
+		if ((bit(jjj, 0) && positive(result)) ||
+		    (bit(jjj, 1) && result == 0) ||
+		    (bit(jjj, 2) && negative(result)))
+			PC = A - 1;
+	} else				/* A-instruction */
+		A = instr;
+	PC++;
+
+	device_ticks();			/* time-based I/O updates */
+	return 1;			/* keep running */
+}
+
+
+/*
  * Main program.
  */
 
@@ -217,10 +281,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	uint16_t A, D, PC;			/* registers */
-	uint16_t a, comp, ddd, jjj;		/* instruction parts */
-	uint16_t result, instr, y;
 	int fd, c;
+	uint16_t instr;
 
 	/* process command line flags */
 	while ((c = getopt(argc, argv, "t:")) != -1) {
@@ -251,66 +313,20 @@ main(int argc, char *argv[])
 	/* print header line to trace file, if applicable */
 	tracehdr();
 
+	/* initialization */
+	A = D = PC = 0;
+
 	/* the main loop */
-	A = D = 0;
-	for (PC = 0; ; T++, PC++) {
-		instr = rom[PC];
-
-		/* print CPU state to trace file, if applicable */
-		trace(PC, instr, A, D);
-
-		if (bit(instr, 15)) {		/* C-instruction */
-			/* decode instruction */
-			jjj	= bits(instr, 0, 3);
-			ddd	= bits(instr, 3, 3);
-			comp	= bits(instr, 6, 6);
-			a	= bits(instr, 12, 1);
-
-			/* switch ALU input between A and M */
-			if (a)
-				y = readmem(A);
-			else
-				y = A;
-
-			/* perform computation */
-			result = alu(D, y, comp);
-
-			/* distribute result to destinations */
-			if (bit(ddd, 0))	/* M */
-				writemem(A, result);
-			if (bit(ddd, 1))	/* D */
-				D = result;
-			if (bit(ddd, 2))	/* A */
-				A = result;
-
-			/*
-			 * Terminate on idiomatic infinite loops. I.e. an
-			 * unconditional jump without any assignment that leads
-			 * (a) directly to itself or (b) to an immediately
-			 * preceding instruction that loads its own address.
-			 *
-			 * 	(a)  @END	(b)  (END)
-			 *	     (END)	     @END
-			 *	     0;JMP	     0;JMP
-			 */
-			if (ddd == 0 && jjj == 7 && 
-			    (A == PC || (A == PC - 1 && rom[A] == A)))
-				break;
-
-			/* perform jump if required */
-			if ((bit(jjj, 0) && positive(result)) ||
-			    (bit(jjj, 1) && result == 0) ||
-			    (bit(jjj, 2) && negative(result)))
-				PC = A - 1;
-		} else				/* A-instruction */
-			A = instr;
-
-		device_ticks();			/* time-based I/O updates */
+	for (T = 0; ; T++) {
+		instr = rom[PC];		/* fetch instruction */
+		trace(PC, instr, A, D);		/* output cur. CPU state */
+		if (!cpu(instr))		/* execute instruction */
+			break;			/* terminate */
 
 		// XXX tick delay
 	}
 
-	/* return success in trace mode */
+	/* always return success in trace mode */
 	if (tfile)
 		return 0;
 
