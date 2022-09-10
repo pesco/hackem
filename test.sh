@@ -8,7 +8,7 @@ for rom in "$@"
 do
 	base=$(basename $rom .rom)
 
-	if ! hackem -t $t $rom >$o
+	if ! hackem -s0 -t $t $rom >$o
 	then
 		echo "ERROR: $rom (exit $?)" >/dev/stderr
 		result=$((result | 8))
