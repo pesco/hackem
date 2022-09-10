@@ -232,17 +232,24 @@ cpu(uint16_t instr)
  * Main program.
  */
 
+#include <assert.h>
+#include <errno.h>
 #include <inttypes.h>	/* PRI... */
+#include <math.h>	/* modf */
+#include <stdlib.h>	/* exit, strtol, strtod */
+#include <time.h>	/* clock_gettime, nanosleep */
 #include <fcntl.h>	/* open */
 #include <unistd.h>	/* close, getopt */
 #include <sys/mman.h>	/* mmap */
-#include <stdlib.h>	/* exit */
+#include <sys/time.h>	/* timespecsub, timespecadd, timespeccmp */
 #include <err.h>
 
 long T;			/* global clock tick counter */
 
 /* command line options */
 FILE *tfile;
+long cpufreq = 1000;	/* clock frequency [Hz] */
+double sfactor = 1.0;	/* time scale (0 = fastest, 1 = realtime, ...) */
 
 void
 tracehdr(void)
@@ -274,19 +281,33 @@ usage(void)
 {
 	extern char *__progname;
 
-	fprintf(stderr, "usage: %s [-t file] prog.rom\n", __progname);
+	fprintf(stderr, "usage: %s [-f freq] [-s factor] [-t file] prog.rom\n",
+	    __progname);
 	exit(100);
 }
 
 int
 main(int argc, char *argv[])
 {
+	struct timespec t, t1, dur;
+	double d;
+	char *ep;
 	int fd, c;
 	uint16_t instr;
 
 	/* process command line flags */
-	while ((c = getopt(argc, argv, "t:")) != -1) {
+	while ((c = getopt(argc, argv, "f:s:t:")) != -1) {
 		switch (c) {
+		case 'f':
+			cpufreq = strtol(optarg, &ep, 10);
+			if (cpufreq <= 0 || *ep != '\0')
+				errx(100, "-f: invalid argument");
+			break;
+		case 's':
+			sfactor = strtod(optarg, &ep);
+			if (sfactor < 0 || *ep != '\0')
+				errx(100, "-s: invalid argument");
+			break;
 		case 't':
 			if ((tfile = fopen(optarg, "w")) == NULL)
 				err(100, "%s", optarg);
@@ -308,13 +329,18 @@ main(int argc, char *argv[])
 		err(100, "mmap");
 	close(fd);
 
-	// XXX time keeping
-
 	/* print header line to trace file, if applicable */
-	tracehdr();
+	if (tfile)
+		fprintf(tfile, "T\tPC\tinstr.\tA\tD\t"
+		    "R0/SP\tR1/LCL\tR2/ARG\tR3/THIS\tR4/THAT\n");
+
+	/* compute the desired duration of one clock tick */
+	dur.tv_nsec = 1000000000L * modf(sfactor / cpufreq, &d);
+	dur.tv_sec = d;
 
 	/* initialization */
 	A = D = PC = 0;
+	clock_gettime(CLOCK_MONOTONIC, &t1);
 
 	/* the main loop */
 	for (T = 0; ; T++) {
@@ -323,7 +349,14 @@ main(int argc, char *argv[])
 		if (!cpu(instr))		/* execute instruction */
 			break;			/* terminate */
 
-		// XXX tick delay
+		/* wait out the rest of the tick */
+		timespecadd(&t1, &dur, &t1);	/* when is the next tick? */
+		clock_gettime(CLOCK_MONOTONIC, &t);
+		if (timespeccmp(&t, &t1, <)) {	/* is that in the future? */
+			timespecsub(&t1, &t, &t);
+			while (nanosleep(&t, &t) == -1)
+				assert(errno == EINTR);
+		}
 	}
 
 	/* always return success in trace mode */
