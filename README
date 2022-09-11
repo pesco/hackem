@@ -1,0 +1,122 @@
+
+
+NAME
+     hackem - an emulator for the Hack computer featuring (paper) tape I/O
+
+SYNOPSIS
+     hackem [-f frequency] [-s factor] [-t file] prog.rom
+     rom prog.rom < prog.hack
+
+DESCRIPTION
+     This repository contains an emulator for the computer described in "The
+     Elements of Computing Systems" and the course "From Nand to Tetris" by
+     Nisan and Schocken.
+
+     The emulator expects a raw ROM image in platform byte order that can be
+     produced with the supplied 'rom' tool. The tool accepts a superset of
+     the .hack file format. Each line of input must contain exactly 16 ASCII-
+     encoded binary digits representing an instruction. As an extension,
+     whitespace, empty lines, and shell-style comments introduced by a '#'
+     character are ignored.
+
+     This implementation is designed to integrate well with the Unix command
+     line. It detects idiomatic infinite loops that are usually used to halt
+     execution and terminates with the contents of D register as exit status.
+     To facilitate data processing, it is extended with three memory-mapped
+     I/O devices that are not described in the book:
+
+          -  A punched tape reader bound to standard input.
+          -  A tape punch bound to standard output.
+          -  An auxiliary printer (using the same interface as the tape
+             punch) bound to standard error.
+
+     The screen and keyboard as described by Nisan and Schocken are not
+     currently supported. Reads from the keyboard address always return zero.
+     The screen memory acts like regular RAM.
+
+     The options are as follows:
+
+     -f frequency
+	     Set the simulated clock frequency, in Hertz (cycles per second).
+	     The default is 1000.
+
+     -s factor
+	     Scale simulation time by the given factor, without changing the
+	     clock frequency. Fractional factors are supported. Factors <1
+	     speed up execution. A factor of 0 eliminates tick delay, letting
+	     the simulation proceed at maximum speed. The default is 1.
+
+     -t file
+	     Trace CPU state during execution, written to the given file in
+	     tab-separated value (.tsv) format.
+
+TAPE INTERFACES
+     The tape reader provides two addresses, mapped to 0x7000 and 0x7001.
+
+     The first address reflects the current value under the read head. It is
+     well-defined only when the control word at the second address indicates a
+     valid position. A negative value indicates the end of the tape, or no
+     tape present at all - corresponding to EOF on standard input.
+
+     Writing to the first address has no effect.
+
+     The second address provides control over the tape feed. Writing 1 to it
+     will advance the tape by one position. The result of writing any other
+     value is undefined.
+
+     Reading from the second address yields a status word. A negative value
+     (bit 15 set) indicates that the value at the read address is valid. All
+     other bits are undefined.
+
+     Thus, the procedure to acquire one byte of input is as follows:
+
+          1.  Write 1 to 0x7001.
+          2.  Read 0x7001 until it is negative.
+          3.  Read 0x7000; if it is negative, indicate the end of input.
+          4.  Otherwise, the value read from 0x7000 is the input byte.
+
+     The tape punch provides two addresses, mapped to 0x7002 and 0x7003.
+
+     A write to the first address causes the corresponding byte to be output
+     and the tape advanced automatically to the next position. The result is
+     only well-defined if the status word at offset 1 indicates readiness.
+
+     The result of reading from the first address is undefined.
+
+     Reading from the second address yields a status word. A negative value
+     (bit 15 set) indicates that the tape is in position for new output. This
+     is invalid, however, if bit 14 is also set. Bit 14 indicates the end of
+     the tape or that no tape is present, corresponding to EOF on standard
+     output. All other bits are undefined.
+
+     The result of writing to the status word is undefined.
+ 
+     Thus, the procedure to produce one byte of output is as follows:
+
+          1.  Read 0x7003 until it is negative.
+          2.  If bit 14 is set, indicate an error.
+          3.  Write the output byte to 0x7002.
+
+     The auxiliary printer, corresponding to standard error, exposes the same
+     interface as the tape punch but is mapped at addresses 0x7004 and 0x7005.
+
+BUILDING
+     Simply run 'make' to build and 'make test' to execute the supplied tests.
+
+     This implementation targets the Unix environment, specifically OpenBSD.
+     Patches that port it to other systems are welcome.
+
+SEE ALSO
+     Noam Nisan and Shimon Schocken, The Elements of Computing Systems, second
+     edition, MIT Press, 2021.
+
+     https://nand2tetris.org
+
+AUTHORS
+     Sven M. Hallberg <pesco@khjk.org>
+
+     Released under the terms of the ISC license.
+
+     The files 'add.hack' and 'max.hack' were derived from similar files
+     included with nand2tetris materials. They are distributed under Creative
+     Commons Non-Commercial Attribution Share-Alike (CC BY-NC-SA) 3.0 license.
