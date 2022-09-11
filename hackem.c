@@ -31,17 +31,17 @@ struct tape {
 
 /* I/O update routines */
 void w_dummy(struct device *, uint16_t *, uint16_t);
-void r_itape(struct device *, uint16_t *, uint16_t);
 void w_itape(struct device *, uint16_t *, uint16_t);
+void t_itape(struct device *, uint16_t *);
 void r_otape(struct device *, uint16_t *, uint16_t);
 void w_otape(struct device *, uint16_t *, uint16_t);
-void t_tape(struct device *, uint16_t *);
+void t_otape(struct device *, uint16_t *);
 
 /* device structures */
 struct device dev_dummy	= {NULL, w_dummy};	/* writes are no-ops */
-struct tape dev_itape	= {{r_itape, w_itape, t_tape}, stdin};
-struct tape dev_otape	= {{r_otape, w_otape, t_tape}, stdout};
-struct tape dev_printer	= {{r_otape, w_otape, t_tape}, stderr};
+struct tape dev_itape	= {{NULL, w_itape, t_itape}, stdin};
+struct tape dev_otape	= {{r_otape, w_otape, t_otape}, stdout};
+struct tape dev_printer	= {{r_otape, w_otape, t_otape}, stderr};
 
 /* instruction and data memories */
 uint16_t ram[32 * 1024];			/* includes I/O space */
@@ -396,46 +396,52 @@ w_dummy(struct device *dev, uint16_t *mem, uint16_t offset)
  * indicates that the value at offset 0 is valid. All other bits are undefined.
  *
  * Procedure to acquire one byte of input:
- *   1.  Read offset 1 until it is negative.
- *   2.  Read offset 0; if it is negative, indicate the end of input.
- *   3.  Otherwise, the value read from offset 0 is the input byte.
- *   4.  Write 1 to offset 1.
+ *   1.  Write 1 to offset 1.
+ *   2.  Read offset 1 until it is negative.
+ *   3.  Read offset 0; if it is negative, indicate the end of input.
+ *   4.  Otherwise, the value read from offset 0 is the input byte.
  */
-
-void
-r_itape(struct device *dev, uint16_t *mem, uint16_t offset)
-{
-	struct tape *tp = (struct tape *)dev;
-	int c;
-
-	if (offset & 1) {			/* offset 1 */
-		// XXX read status word
-	} else {				/* offset 0 */
-		#if 0 // XXX busy time
-		if (t < tp->busy)		/* device busy */
-			return;
-		#endif
-
-		if ((c = fgetc(tp->stream)) != EOF)
-			mem[offset] = (uint16_t) c;
-		else
-			mem[offset] = -1;
-	}
-}
 
 void
 w_itape(struct device *dev, uint16_t *mem, uint16_t offset)
 {
-	// XXX input tape advance/seek
+	struct tape *tp = (struct tape *)dev;
+
+	if (offset & 1) {			/* offset 1 */
+		if (tp->busy)
+			return;
+
+		/* store "garbage" at offset 0 and "invalid" at offset 1 */
+		mem[0] = 0;
+		mem[1] = 0;
+
+		/* mark drive busy for 150 ms */
+		tp->busy = cpufreq * 150 / 1000;
+		assert(tp->busy >= 0);
+	} else {				/* offset 0 */
+		/* no effect */
+	}
 }
 
 void
-t_tape(struct device *dev, uint16_t *mem)
+t_itape(struct device *dev, uint16_t *mem)
 {
 	struct tape *tp = (struct tape *)dev;
+	int c;
 
-	if (tp->busy > 0)
-		tp->busy--;
+	if (tp->busy == 0)			/* idle */
+		return;
+
+	if (--tp->busy == 0) {
+		/* fetch and store the next character */
+		if ((c = fgetc(tp->stream)) != EOF)
+			mem[0] = c;
+		else
+			mem[0] = 0x8000;
+
+		/* set control word to "ready" */
+		mem[1] = 0x8000;
+	}
 }
 
 
@@ -501,4 +507,13 @@ w_otape(struct device *dev, uint16_t *mem, uint16_t offset)
 		tp->busy = cpufreq * 150 / 1000;
 		assert(tp->busy >= 0);
 	}
+}
+
+void
+t_otape(struct device *dev, uint16_t *mem)
+{
+	struct tape *tp = (struct tape *)dev;
+
+	if (tp->busy > 0)
+		tp->busy--;
 }
