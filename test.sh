@@ -7,8 +7,10 @@ o=$(mktemp)
 for rom in "$@"
 do
 	base=$(basename $rom .rom)
+	i=$base.in
+	[ -f $i ] || i=/dev/null
 
-	if ! hackem -s0 -t $t $rom >$o
+	if ! hackem -s0 -t $t $rom >$o <$i
 	then
 		echo "ERROR: $rom (exit $?)" >/dev/stderr
 		result=$((result | 8))
