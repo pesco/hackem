@@ -1,7 +1,7 @@
 CFLAGS += -Wall
 
 PROGS = hackem rom
-ROMS = add.rom max.rom term0.rom term1.rom term2.rom hello.rom
+ROMS = add.rom max.rom term0.rom term1.rom term2.rom hello.rom atoi.rom
 
 .PHONY: all test clean
 all: ${PROGS} ${ROMS}
