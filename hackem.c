@@ -176,7 +176,7 @@ int
 cpu(uint16_t instr)
 {
 	uint16_t a, comp, ddd, jjj;	/* instruction parts */
-	uint16_t result, y;
+	uint16_t dest, result, y;
 
 	if (bit(instr, 15)) {		/* C-instruction */
 		/* decode instruction */
@@ -184,6 +184,9 @@ cpu(uint16_t instr)
 		ddd	= bits(instr, 3, 3);
 		comp	= bits(instr, 6, 6);
 		a	= bits(instr, 12, 1);
+
+		/* save jump destination before updating A */
+		dest	= A;
 
 		/* switch ALU input between A and M */
 		if (a)
@@ -213,14 +216,14 @@ cpu(uint16_t instr)
 		 *	     0;JMP	     0;JMP
 		 */
 		if (ddd == 0 && jjj == 7 && 
-		    (A == PC || (A == PC - 1 && rom[A] == A)))
+		    (dest == PC || (dest == PC - 1 && rom[dest] == dest)))
 			return 0;	/* stop */
 
 		/* perform jump if required */
 		if ((bit(jjj, 0) && positive(result)) ||
 		    (bit(jjj, 1) && result == 0) ||
 		    (bit(jjj, 2) && negative(result)))
-			PC = A - 1;
+			PC = dest - 1;
 	} else				/* A-instruction */
 		A = instr;
 	PC++;
