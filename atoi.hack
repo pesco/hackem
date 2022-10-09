@@ -4,6 +4,13 @@
 
 			# jump to start of program
 0 000000000001111	#  0: @15	= MAIN
+			# fall through to JMP in next instruction...
+
+
+#
+# END: terminate (infinite loop).
+#
+			# (END)
 1 11 0 101010 000 111	#  1: 0;JMP
 
 #
@@ -30,13 +37,7 @@
 
 			# jump to return address in R3:
 0 000000000000011	# 12: @3
-1 11 1 110000 100 111	# 13: A=M;JMP
-
-
-#
-# END: terminate (infinite loop).
-#
-			# (END)
+1 11 1 110000 100 000	# 13: A=M;
 1 11 0 101010 000 111	# 14: 0;JMP
 
 
@@ -100,5 +101,5 @@
 			# terminate successfully:
 			#     (DONE)
 1 11 0 101010 010 000	# 54: D=0;
-0 000000000001110	# 55: @14	= END
+0 000000000000001	# 55: @1	= END
 1 11 0 101010 000 111	# 56: 0;JMP

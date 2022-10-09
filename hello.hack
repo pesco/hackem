@@ -6,6 +6,13 @@
 
 			# jump to the beginning of the program:
 0 000000000010100	#  0: @20	= MAIN
+			# fall through to JMP in next instruction...
+
+
+#
+# END: terminate (infinite loop)
+#
+			#     (END)
 1 11 0 101010 000 111	#  1: 0;JMP
 
 
@@ -26,7 +33,7 @@
 0 000000000001101	#  8: @13	= CONT
 1 11 0 001100 000 010	#  9: D;JEQ
 1 11 0 111111 010 000	# 10: D=1;
-0 000000000010011	# 11: @19	= END
+0 000000000000001	# 11: @1	= END
 1 11 0 101010 000 111	# 12: 0;JMP
 			#     (CONT)
 
@@ -38,13 +45,7 @@
 
 			# jump to return address stored in R3
 0 000000000000011	# 17: @3
-1 11 1 110000 100 111	# 18: A=M;JMP
-
-
-#
-# END: terminate (infinite loop)
-#
-			#     (END)
+1 11 1 110000 100 000	# 18: A=M;
 1 11 0 101010 000 111	# 19: 0;JMP
 
 
@@ -94,5 +95,5 @@
 
 			# terminate successfully:
 1 11 0 101010 010 000	# 50: D=0;
-0 000000000010011	# 51: @19	= END
+0 000000000000001	# 51: @1	= END
 1 11 0 101010 000 111	# 52: 0;JMP
